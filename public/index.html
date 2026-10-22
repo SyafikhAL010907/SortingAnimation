@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Visualisasi Bubble Sort vs Insertion Sort</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet" />
+  <style>
+    :root { --bg:#07161b; --panel:#0d2229; --line:#1f4650; --box:#12303a; --cy:#4cc9e0;
+            --gr:#12a876; --ye:#f2c94c; --bl:#5aa9e6; --tx:#d5edf1; --mu:#7aa3ab; }
+    body { background: radial-gradient(1200px 600px at 50% -10%, #0d2c34, var(--bg)); color: var(--tx);
+           font-family: 'JetBrains Mono', ui-monospace, Menlo, Consolas, monospace; min-height: 100vh; }
+    .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 16px; padding: 18px; min-width: 0; }
+    .stage { position: relative; height: 230px; }               /* baris kotak ada di y=86 */
+    .box { position: absolute; left: 0; top: 0; height: 56px; display: flex; align-items: center;
+           justify-content: center; font-weight: 700; background: var(--box); border: 2px solid #2c6670;
+           border-radius: 10px; transition: background .25s, border-color .25s, box-shadow .25s; }
+    .box.moved  { border-color: var(--cy); background: #1a4a55; }
+    .box.cmp    { border-color: var(--cy); box-shadow: 0 0 14px #4cc9e055; }
+    .box.key    { border-color: var(--ye); box-shadow: 0 0 14px #f2c94c55; }
+    .box.sorted { background: var(--gr); border-color: #3fe0aa; color: #04251a; }
+    .divider { position: absolute; top: 70px; height: 88px; width: 2px; background: #3fe0aa;
+               border-radius: 2px; transition: left .4s, opacity .3s; }
+    .brk { position: absolute; top: 72px; height: 10px; border: 2px solid var(--cy); border-bottom: 0;
+           border-radius: 4px 4px 0 0; opacity: 0; transition: left .2s, width .2s, opacity .2s; }
+    .brk span { position: absolute; left: 50%; top: -24px; transform: translateX(-50%); color: var(--cy); font-weight: 700; }
+    .chip { border: 1.5px solid; border-radius: 999px; padding: 4px 14px; font-weight: 700; font-size: .85rem; }
+    .chip.y { color: var(--ye); border-color: #8a7424; background: #2a2610; }
+    .chip.b { color: var(--bl); border-color: #2f5f8a; background: #102436; }
+    .chip.c { color: var(--cy); border-color: #2a6c78; background: #0f2b32; }
+    .code { background: #101e26; border-radius: 12px; padding: 12px 0; overflow-x: auto; font-size: .82rem; line-height: 1.7; }
+    .ln { display: flex; white-space: pre; padding: 0 14px; border-left: 3px solid transparent; }
+    .ln i { width: 2ch; margin-right: 14px; color: #5c7f88; font-style: normal; text-align: right; }
+    .ln.on { background: #0f4f48; border-left-color: #3fe0aa; }
+    .tk-k { color: #e879b9; } .tk-b { color: var(--cy); } .tk-n { color: #f59e6b; } .tk-f { color: var(--ye); }
+    .inp { display: flex; align-items: center; gap: 10px; flex: 1; min-width: 240px; background: var(--panel);
+           border: 1.5px solid var(--line); border-radius: 12px; padding: 6px 16px; }
+    .inp:focus-within { border-color: var(--cy); box-shadow: 0 0 0 3px #4cc9e033; }
+    .inp b { font-size: 1.8rem; color: var(--cy); font-weight: 400; }
+    .inp input::placeholder { color: #4f7882; }
+    .inp input { flex: 1; min-width: 0; background: transparent; outline: none; color: var(--tx); font: inherit; font-size: 1.05rem; }
+    .btn { border-radius: 10px; padding: 10px 18px; font-weight: 700; color: #04181d; }
+    .btn:disabled { opacity: .35; cursor: not-allowed; }
+    .go { background: var(--cy); } .no { background: #f4718a; } .re { background: #3fe0aa; }
+    #grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 520px), 1fr)); gap: 24px; }
+  </style>
+</head>
+<body>
+  <header class="max-w-6xl mx-auto px-4 pt-6">
+    <h1 class="text-2xl font-bold">Bubble Sort vs Insertion Sort</h1>
+    <p class="text-sm mt-1" style="color:var(--mu)">Ketik angkanya saja, spasi diatur otomatis. Maksimal 6 angka, tiap angka 0–99 (09 dibaca 9), tidak boleh ada yang sama. Angka satu digit: awali 0 (05) atau ketik spasi setelahnya. <span id="cnt" class="font-bold"></span></p>
+    <div class="mt-4 flex flex-wrap gap-3 items-center">
+      <label class="inp"><b>[</b><input id="inp" placeholder="13 21 93 73 56 66" inputmode="numeric" autocomplete="off" /><b>]</b></label>
+      <button id="btnStart" class="btn go">Start Animation</button>
+      <button id="btnStop" class="btn no" disabled>Stop</button>
+      <button id="btnResume" class="btn re" disabled>Lanjutkan</button>
+      <label class="flex items-center gap-2 text-sm" style="color:var(--mu)">Kecepatan
+        <input id="speed" type="range" min="1" max="5" value="3" /></label>
+      <label class="flex items-center gap-2 text-sm" style="color:var(--mu)">
+        <input id="snd" type="checkbox" checked /> Suara</label>
+    </div>
+    <p id="msg" class="mt-3 text-sm" style="min-height:1.3rem" role="status"></p>
+  </header>
+
+  <main id="grid" class="max-w-6xl mx-auto px-4 py-5"></main>
+
+  <script>
+    const $ = (id) => document.getElementById(id);
+    const ROW_Y = 86, AMP = 50, GAP = 8;   // posisi baris kotak, tinggi lengkung, jarak antar kotak
+
+    /* ---------- Kode yang ditampilkan (nomor baris = field "lines" dari backend) ---------- */
+    const CFG = [
+      { key: 'bubble', title: 'Bubble Sort', base: 700, wave: 'square', chips: [['i','y'],['j','b'],['limit','c']], code: [
+        'def bubble_sort(arr):', '    n = len(arr)', '    for i in range(n - 1):', '        swapped = False',
+        '        for j in range(n - 1 - i):', '            if arr[j] > arr[j + 1]:',
+        '                arr[j], arr[j + 1] = arr[j + 1], arr[j]', '                swapped = True',
+        '        if not swapped:', '            break', '    return arr'] },
+      { key: 'insertion', title: 'Insertion Sort', base: 880, wave: 'sawtooth', chips: [['i','y'],['j','b'],['key','c']], code: [
+        'def insertion_sort(arr):', '    for i in range(1, len(arr)):', '        key = arr[i]', '        j = i - 1',
+        '        while j >= 0 and arr[j] > key:', '            arr[j + 1] = arr[j]', '            j -= 1',
+        '        arr[j + 1] = key', '    return arr'] },
+    ];
+
+    // Pewarnaan sintaks Python sederhana (satu kali lewat regex agar tag tidak saling menimpa)
+    const TOK = /(\b(?:def|for|in|if|while|and|return|break|not)\b)|(\b(?:range|len)\b)|(\b(?:False|True|\d+)\b)|((?<=def\s)\w+)/g;
+    const hl = (s) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;')
+      .replace(TOK, (m, k, b, n) => `<span class="tk-${k ? 'k' : b ? 'b' : n ? 'n' : 'f'}">${m}</span>`);
+
+    /* ---------- Bangun 2 panel ---------- */
+    const panels = CFG.map((c) => {
+      const s = document.createElement('section');
+      s.className = 'panel';
+      s.innerHTML = `
+        <div class="flex items-baseline justify-between"><h2 class="font-bold text-lg">${c.title}</h2>
+          <span class="stp text-sm" style="color:var(--mu)">Langkah 0 / 0</span></div>
+        <div class="stage"><div class="divider"></div><div class="brk"><span>&gt;</span></div></div>
+        <div class="arrv text-center font-bold" style="color:var(--mu)">[ ]</div>
+        <div class="cmpt text-center font-bold" style="min-height:1.7rem;margin-top:6px"></div>
+        <div class="flex justify-center gap-2 flex-wrap my-3">${c.chips.map(([k, cl]) =>
+          `<span class="chip ${cl}" data-k="${k}">${k} = –</span>`).join('')}</div>
+        <div class="code">${c.code.map((t, i) => `<div class="ln"><i>${i + 1}</i><span>${hl(t)}</span></div>`).join('')}</div>`;
+      $('grid').appendChild(s);
+      return { ...c, stage: s.querySelector('.stage'), divider: s.querySelector('.divider'), brk: s.querySelector('.brk'),
+               stp: s.querySelector('.stp'), arrv: s.querySelector('.arrv'), cmpt: s.querySelector('.cmpt'),
+               chipEls: [...s.querySelectorAll('.chip')], lnEls: [...s.querySelectorAll('.ln')],
+               trace: [], els: [], step: 0, timer: null, done: false, g: null };
+    });
+
+    /* ---------- Suara (WebAudio) ---------- */
+    let actx = null, bus = null;
+    function beep(freq, dur = .09, type = 'square', vol = .5, when = 0) {
+      if (!actx || !$('snd').checked) return;
+      if (!bus) {                                   // master: penguat + limiter agar keras tapi tidak pecah
+        bus = actx.createGain(); bus.gain.value = 1.8;
+        const limiter = actx.createDynamicsCompressor();
+        bus.connect(limiter); limiter.connect(actx.destination);
+      }
+      const t = actx.currentTime + when, o = actx.createOscillator(), g = actx.createGain();
+      o.type = type; o.frequency.value = freq;
+      g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(.0001, t + dur);
+      o.connect(g).connect(bus); o.start(t); o.stop(t + dur + .02);
+    }
+    const jingle = (p) => [1, 1.25, 1.5, 2, 2.4].forEach((m, k) => beep(p.base * m, .24, p.wave, .45, k * .11)); // "bib berhasil" per panel
+
+    /* ---------- Geometri & kotak ---------- */
+    function geom(p, n) {
+      const W = p.stage.clientWidth, w = Math.max(18, Math.min(64, (W - GAP * (n - 1)) / n));
+      p.g = { w, gap: GAP, off: Math.max(0, (W - (n * w + GAP * (n - 1))) / 2) };
+    }
+    const X = (p, i) => p.g.off + i * (p.g.w + p.g.gap);
+    const at = (p, i) => `translate(${X(p, i)}px, ${ROW_Y}px)`;
+
+    function build(p, arr) {
+      p.stage.querySelectorAll('.box').forEach((e) => e.remove());
+      geom(p, arr.length);
+      p.els = arr.map((v, i) => {
+        const el = document.createElement('div');
+        el.className = 'box'; el.textContent = v; el.dataset.v = v;
+        el.style.width = p.g.w + 'px';
+        el.style.fontSize = Math.max(11, Math.min(20, p.g.w * .42)) + 'px';
+        el.style.transform = at(p, i);
+        p.stage.appendChild(el);
+        return el;
+      });
+    }
+
+    /* Gerak melengkung (setengah lingkaran/U): dir = -1 lewat atas, +1 lewat bawah */
+    function arc(p, el, from, to, dir, dur) {
+      if (el._a) el._a.finish();
+      const x0 = X(p, from), x1 = X(p, to), kf = [];
+      for (let k = 0; k <= 24; k++) {
+        const t = k / 24, e = t < .5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;   // easing in-out
+        kf.push({ transform: `translate(${x0 + (x1 - x0) * e}px, ${ROW_Y + dir * AMP * Math.sin(Math.PI * e)}px)` });
+      }
+      el.style.transform = at(p, to);                      // posisi akhir (tetap setelah animasi selesai)
+      el._a = el.animate(kf, { duration: dur, easing: 'linear' });
+      el._a.onfinish = () => { el._a = null; };
+    }
+
+    /* ---------- Terapkan satu event dari Python ke DOM ---------- */
+    function describe(p, ev) {
+      const a = ev.arr;
+      if (ev.op === 'compare') {
+        const op = ev.gt ? '>' : '≤';
+        if (p.key === 'bubble') return `A[j] = ${a[ev.pair[0]]}  ${op}  A[j+1] = ${a[ev.pair[1]]}`;
+        return ev.pair ? `arr[j] = ${a[ev.pair[0]]}  ${op}  key = ${ev.key}` : 'j < 0 → berhenti';
+      }
+      return ({ start: 'Siap dijalankan', swap: 'Tukar posisi!', shift: 'Geser arr[j] ke kanan, key maju ke kiri',
+        key: `Ambil key = ${ev.key}`, place: `Sisipkan key = ${ev.key}`, pass_end: 'Putaran selesai: satu elemen sudah final',
+        break: 'Tidak ada swap → sudah terurut', done: 'Selesai: array terurut' })[ev.op] || '';
+    }
+
+    function handle(p, ev, dur) {
+      if (ev.swap) {                                       // kiri -> kanan lewat ATAS, kanan -> kiri lewat BAWAH
+        const [a, b] = ev.swap, L = p.els[a], R = p.els[b];
+        p.els[a] = R; p.els[b] = L;
+        arc(p, L, a, b, -1, dur); arc(p, R, b, a, 1, dur);
+        beep(p.base * 1.5, .09, p.wave); beep(p.base * 1.5, .09, p.wave, .5, .12);   // bip-bip
+      } else if (ev.op === 'compare') beep(p.base, .08, p.wave);
+      else if (ev.op === 'place') beep(p.base * 2, .1, p.wave);
+
+      // Pengecekan 1:1 dengan array Python; kalau beda, gambar ulang dari array Python
+      if (p.els.some((el, i) => +el.dataset.v !== ev.arr[i])) build(p, ev.arr);
+
+      const pair = ev.pair || [], srt = new Set(ev.sorted || []);
+      p.els.forEach((el, i) => {
+        const c = ['box'];
+        if (srt.has(i)) c.push('sorted'); else if (ev.swap && ev.swap.includes(i)) c.push('moved');
+        if (pair.includes(i)) c.push('cmp');
+        if (i === ev.keypos && !srt.has(i)) c.push('key');
+        el.className = c.join(' ');
+      });
+
+      if (ev.pair) {                                       // bracket perbandingan
+        const lo = Math.min(...ev.pair), hi = Math.max(...ev.pair);
+        p.brk.style.opacity = 1; p.brk.style.left = X(p, lo) - 4 + 'px';
+        p.brk.style.width = X(p, hi) + p.g.w - X(p, lo) + 8 + 'px';
+        p.brk.querySelector('span').textContent = ev.gt ? '>' : '≤';
+      } else p.brk.style.opacity = 0;
+
+      const b = ev.boundary;                               // garis pemisah area sorted
+      if (b == null || b <= 0 || b >= p.els.length) p.divider.style.opacity = 0;
+      else { p.divider.style.opacity = 1; p.divider.style.left = X(p, b) - p.g.gap / 2 - 1 + 'px'; }
+
+      p.arrv.textContent = '[' + ev.arr.join(' ') + ']';
+      p.cmpt.textContent = describe(p, ev);
+      p.chipEls.forEach((c) => { const v = ev[c.dataset.k]; c.textContent = `${c.dataset.k} = ${v == null ? '–' : v}`; });
+      p.lnEls.forEach((l, i) => l.classList.toggle('on', ev.lines.includes(i + 1)));
+      p.stp.textContent = `Langkah ${p.step} / ${p.trace.length - 1}`;
+    }
+
+    /* ---------- Penjadwal animasi (setTimeout per panel) ---------- */
+    const delay = () => [1600, 1100, 800, 500, 250][$('speed').value - 1];
+    let running = false, hasRun = false, runId = 0;
+
+    function run(p) {
+      if (p.step >= p.trace.length - 1) return finishPanel(p);
+      const ev = p.trace[++p.step], base = delay();
+      handle(p, ev, base * .85);
+      p.timer = setTimeout(() => run(p), ev.swap ? base : base * .55);   // compare lebih cepat dari swap
+    }
+
+    function finishPanel(p) {
+      p.done = true; jingle(p);
+      if (panels.every((q) => q.done)) {
+        running = false; setButtons('finished');
+        msg('Selesai! Kedua algoritma menghasilkan array terurut.');
+      }
+    }
+
+    const clearAll = () => panels.forEach((p) => { clearTimeout(p.timer); p.timer = null; });
+
+    /* ---------- Tombol ---------- */
+    const msg = (t, err) => { $('msg').textContent = t; $('msg').style.color = err ? '#f4718a' : 'var(--mu)'; };
+    function setButtons(m) {
+      $('btnStart').disabled = m === 'loading';
+      $('btnStop').disabled = m !== 'running';
+      $('btnResume').disabled = m !== 'paused';
+    }
+
+    /* ---------- Input otomatis: user cukup mengetik angka ----------
+       Aturan: tiap angka maksimal 2 digit (0-99), maksimal 6 angka.
+       Setiap 2 digit otomatis jadi satu angka & diberi spasi oleh sistem.
+       Angka 1 digit: awali 0 (05) atau ketik spasi setelahnya. "09" dibaca 9. */
+    const MAX_N = 6;
+    function tokenize(str) {
+      const tokens = [], used = new Set();
+      let cur = '', trail = false, over = false, bad = false, dup = null;
+      // commit: masukkan angka ke daftar, tolak kalau nilainya sudah ada
+      const commit = (tk) => {
+        const v = Number(tk);                                  // "09" -> 9
+        if (used.has(v)) { dup = v; return false; }
+        used.add(v); tokens.push(tk); return true;
+      };
+      for (const ch of str) {
+        if (/\d/.test(ch)) {
+          trail = false;
+          if (!cur && tokens.length >= MAX_N) { over = true; continue; }   // angka ke-7 ditolak
+          cur += ch;
+          if (cur.length === 2) { commit(cur); cur = ''; }                 // 2 digit -> angka baru
+        } else if (/[\s,;\[\]]/.test(ch)) {                                // pemisah (boleh tempel [1, 2, 3])
+          if (cur) { if (commit(cur)) trail = true; cur = ''; }
+        } else bad = true;                                                 // huruf, minus, titik, dll ditolak
+      }
+      return { tokens, cur, trail, over, bad, dup };
+    }
+    const fmt = (t) => t.tokens.join(' ') + (t.trail ? ' ' : '') + (t.cur ? (t.tokens.length ? ' ' : '') + t.cur : '');
+
+    $('inp').addEventListener('input', () => {
+      const el = $('inp'), t = tokenize(el.value), f = fmt(t), n = t.tokens.length + (t.cur ? 1 : 0);
+      if (el.value !== f) el.value = f;
+      $('cnt').textContent = `Angka: ${n}/${MAX_N}`;
+      $('cnt').style.color = n >= MAX_N ? '#f2c94c' : 'var(--cy)';
+      if (t.dup != null) msg(`Angka ${t.dup} sudah dipakai. Angka tidak boleh sama.`, true);
+      else if (t.over) msg(`Angka sudah maksimal (${MAX_N} angka).`, true);
+      else if (t.bad) msg('Hanya angka 0–99 yang boleh diketik.', true);
+    });
+
+    function parseInput() {
+      const t = tokenize($('inp').value);
+      const nums = [...t.tokens, ...(t.cur ? [t.cur] : [])].map(Number);   // "09" -> 9
+      if (nums.length < 2) throw new Error('Masukkan minimal 2 angka.');
+      if (new Set(nums).size !== nums.length) throw new Error('Angka tidak boleh ada yang sama.');
+      return nums;
+    }
+
+    async function start() {
+      clearAll(); running = false; hasRun = false;
+      const my = ++runId;
+      let numbers;
+      try { numbers = parseInput(); } catch (e) { msg(e.message, true); setButtons('idle'); return; }
+
+      actx = actx || new (window.AudioContext || window.webkitAudioContext)();   // harus dari klik user
+      actx.resume();
+      setButtons('loading'); msg('Mengirim angka ke server Python...');
+      try {
+        const res = await fetch('/api/sort', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+                                               body: JSON.stringify({ numbers }) });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Terjadi kesalahan di server.');
+        if (my !== runId) return;
+        panels[0].trace = data.bubble_trace; panels[1].trace = data.insertion_trace;
+        panels.forEach((p) => {
+          p.step = 0; p.done = false; build(p, p.trace[0].arr); handle(p, p.trace[0], 0);
+          p.timer = setTimeout(() => run(p), 700);
+        });
+        running = hasRun = true; setButtons('running');
+        msg('Animasi berjalan. Hijau = sudah terurut, kuning = key yang disisipkan.');
+      } catch (e) {
+        if (my !== runId) return;
+        msg(e.message, true); setButtons('idle');
+      }
+    }
+
+    function stop() {
+      if (!running) return;
+      clearAll(); running = false; setButtons('paused');
+      msg('Dijeda. Tekan "Lanjutkan" atau ubah angka lalu Start Animation.');
+    }
+
+    function resume() {
+      if (!hasRun || running) return;
+      running = true; setButtons('running'); msg('Animasi dilanjutkan.');
+      panels.forEach((p) => { if (!p.done) run(p); });
+    }
+
+    $('btnStart').onclick = start; $('btnStop').onclick = stop; $('btnResume').onclick = resume;
+    $('inp').addEventListener('keydown', (e) => { if (e.key === 'Enter') start(); });
+    addEventListener('resize', () => panels.forEach((p) => {
+      if (!p.els.length) return;
+      geom(p, p.els.length);
+      p.els.forEach((el, i) => { el.style.width = p.g.w + 'px'; el.style.transform = at(p, i); });
+    }));
+
+    $('inp').dispatchEvent(new Event('input'));   // isi counter "Angka: n/6" dari nilai awal
+    setButtons('idle'); msg('Tekan "Start Animation" untuk memulai.');
+  </script>
+</body>
+</html>
