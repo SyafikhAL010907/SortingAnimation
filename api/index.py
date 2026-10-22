@@ -21,7 +21,7 @@ PUBLIC_DIR = BASE_DIR / "public"
 app = Flask(__name__, static_folder=str(PUBLIC_DIR), static_url_path="")
 
 MAX_ITEMS = 6    # maksimal 6 angka
-MAX_VALUE = 99   # tiap angka 0-99 (puluhan saja)
+MAX_VALUE = 99   # tiap angka 0-99 (satuan maupun puluhan)
 
 
 def ev(op, lines, view, **extra):

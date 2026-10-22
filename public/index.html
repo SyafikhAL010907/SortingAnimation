@@ -68,9 +68,9 @@
   <header class="max-w-6xl mx-auto px-4 pt-6">
     <span class="name">Tugas Maulana Syafikh Alkhudri - 1512625004</span>
     <h1 class="font-bold mt-3" style="font-size:clamp(1.3rem,4.5vw,1.75rem)">Bubble Sort vs Insertion Sort</h1>
-    <p class="text-sm mt-1" style="color:var(--mu)">Ketik angkanya saja, spasi diatur otomatis. Maksimal 6 angka, tiap angka 0–99 (09 dibaca 9), tidak boleh ada yang sama. Angka satu digit: awali 0 (05) atau ketik spasi setelahnya. <span id="cnt" class="font-bold"></span></p>
+    <p class="text-sm mt-1" style="color:var(--mu)">Bisa angka satuan (0–9) maupun puluhan (10–99). Pisahkan dengan spasi jika ingin satuan di tengah (contoh: <code>80 5 35</code>). Maksimal 6 angka unik. <span id="cnt" class="font-bold"></span></p>
     <div class="mt-4 flex flex-wrap gap-3 items-center">
-      <label class="inp"><b>[</b><input id="inp" placeholder="13 21 93 73 56 66" inputmode="numeric" autocomplete="off" /><b>]</b></label>
+      <label class="inp"><b>[</b><input id="inp" placeholder="80 5 35 atau 5 3 8 4 6 2" inputmode="numeric" autocomplete="off" /><b>]</b></label>
       <button id="btnStart" class="btn go">Start Animation</button>
       <button id="btnStop" class="btn no" disabled>Stop</button>
       <button id="btnResume" class="btn re" disabled>Lanjutkan</button>
@@ -79,7 +79,9 @@
       <label class="flex items-center gap-2 text-sm" style="color:var(--mu)">
         <input id="snd" type="checkbox" checked /> Suara</label>
     </div>
-    <p id="msg" class="mt-3 text-sm" style="min-height:1.3rem" role="status"></p>
+    <div id="preview" class="mt-2.5 flex items-center gap-2 flex-wrap text-xs" style="color:var(--mu);min-height:1.5rem"></div>
+    <p id="msg" class="mt-1 text-sm" style="min-height:1.3rem" role="status"></p>
+
   </header>
 
   <main id="grid" class="max-w-6xl mx-auto px-4 py-5"></main>
@@ -262,17 +264,21 @@
       $('btnResume').disabled = m !== 'paused';
     }
 
-    /* ---------- Input otomatis: user cukup mengetik angka ----------
-       Aturan: tiap angka maksimal 2 digit (0-99), maksimal 6 angka.
-       Setiap 2 digit otomatis jadi satu angka & diberi spasi oleh sistem.
-       Angka 1 digit: awali 0 (05) atau ketik spasi setelahnya. "09" dibaca 9. */
+    /* ---------- Input angka: mendukung satuan (0–9) & puluhan (10–99) ----------
+       - Angka dipisahkan spasi atau koma (misal: "5 3 8 4 6 2" atau "80 35")
+       - Mengetik 6 angka satuan langsung (misal: "538462") otomatis diformat jadi "5 3 8 4 6 2"
+       - Tiap angka maksimal 2 digit (0–99), maksimal 6 angka unik. */
     const MAX_N = 6;
     function tokenize(str) {
+      let clean = str.trim();
+      if (/^\d{6}$/.test(clean)) {
+        str = clean.split('').join(' ');
+      }
       const tokens = [], used = new Set();
       let cur = '', trail = false, over = false, bad = false, dup = null;
       // commit: masukkan angka ke daftar, tolak kalau nilainya sudah ada
       const commit = (tk) => {
-        const v = Number(tk);                                  // "09" -> 9
+        const v = Number(tk);
         if (used.has(v)) { dup = v; return false; }
         used.add(v); tokens.push(tk); return true;
       };
@@ -280,25 +286,56 @@
         if (/\d/.test(ch)) {
           trail = false;
           if (!cur && tokens.length >= MAX_N) { over = true; continue; }   // angka ke-7 ditolak
+          if (cur.length === 2) {
+            commit(cur);
+            cur = '';
+          }
           cur += ch;
-          if (cur.length === 2) { commit(cur); cur = ''; }                 // 2 digit -> angka baru
         } else if (/[\s,;\[\]]/.test(ch)) {                                // pemisah (boleh tempel [1, 2, 3])
           if (cur) { if (commit(cur)) trail = true; cur = ''; }
-        } else bad = true;                                                 // huruf, minus, titik, dll ditolak
+          else if (tokens.length) { trail = true; }
+        } else bad = true;                                                 // karakter lain ditolak
       }
       return { tokens, cur, trail, over, bad, dup };
     }
     const fmt = (t) => t.tokens.join(' ') + (t.trail ? ' ' : '') + (t.cur ? (t.tokens.length ? ' ' : '') + t.cur : '');
 
+    function updateInputValue(el, nextVal) {
+      if (el.value === nextVal) return;
+      const start = el.selectionStart, end = el.selectionEnd, oldLen = el.value.length;
+      el.value = nextVal;
+      if (start != null && end != null) {
+        const diff = nextVal.length - oldLen;
+        const newStart = Math.max(0, Math.min(nextVal.length, start + diff));
+        const newEnd = Math.max(0, Math.min(nextVal.length, end + diff));
+        el.setSelectionRange(newStart, newEnd);
+      }
+    }
+
+    function updatePreview(tokens, cur) {
+      const all = [...tokens, ...(cur ? [cur] : [])];
+      const p = $('preview');
+      if (!p) return;
+      if (!all.length) { p.innerHTML = ''; return; }
+      p.innerHTML = '<span style="color:var(--mu)">Urutan angka terbaca:</span> ' +
+        all.map((v) => {
+          const num = Number(v), isSatuan = num < 10;
+          return `<span class="px-2 py-0.5 rounded font-bold ${isSatuan ? 'text-[#f2c94c] bg-[#2a2610] border border-[#8a7424]' : 'text-[#4cc9e0] bg-[#0f2b32] border border-[#2a6c78]'}">${v} <span style="font-size:0.65rem;opacity:0.8">${isSatuan ? '(satuan)' : '(puluhan)'}</span></span>`;
+        }).join(' ');
+    }
+
     $('inp').addEventListener('input', () => {
       const el = $('inp'), t = tokenize(el.value), f = fmt(t), n = t.tokens.length + (t.cur ? 1 : 0);
-      if (el.value !== f) el.value = f;
+      updateInputValue(el, f);
+      updatePreview(t.tokens, t.cur);
       $('cnt').textContent = `Angka: ${n}/${MAX_N}`;
       $('cnt').style.color = n >= MAX_N ? '#f2c94c' : 'var(--cy)';
       if (t.dup != null) msg(`Angka ${t.dup} sudah dipakai. Angka tidak boleh sama.`, true);
       else if (t.over) msg(`Angka sudah maksimal (${MAX_N} angka).`, true);
       else if (t.bad) msg('Hanya angka 0–99 yang boleh diketik.', true);
+      else msg('');
     });
+
 
     function parseInput() {
       const t = tokenize($('inp').value);
