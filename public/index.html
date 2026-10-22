@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Visualisasi Bubble Sort vs Insertion Sort</title>
+  <title>Bubble Sort vs Insertion Sort | Tugas Maulana Syafikh Alkhudri - 1512625004</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet" />
   <style>
@@ -43,12 +43,31 @@
     .btn { border-radius: 10px; padding: 10px 18px; font-weight: 700; color: #04181d; }
     .btn:disabled { opacity: .35; cursor: not-allowed; }
     .go { background: var(--cy); } .no { background: #f4718a; } .re { background: #3fe0aa; }
+    html, body { overflow-x: hidden; }
+    .name { display: inline-block; max-width: 100%; overflow-wrap: anywhere; border: 1.5px solid #2a6c78;
+            background: #0f2b32; color: var(--cy); border-radius: 999px; padding: 4px 14px; font-size: .8rem; font-weight: 700; }
+    .btn { min-height: 44px; }                       /* target sentuh nyaman di HP */
+    .cmpt { overflow-wrap: anywhere; }
+    @media (max-width: 640px) {                      /* HP */
+      .panel { padding: 12px; border-radius: 14px; }
+      .inp { flex-basis: 100%; min-width: 0; padding: 4px 12px; }
+      .inp b { font-size: 1.4rem; }
+      .inp input { font-size: 1rem; }
+      #btnStart { flex: 1 1 100%; }
+      #btnStop, #btnResume { flex: 1 1 40%; }
+      .chip { padding: 3px 10px; font-size: .75rem; }
+      .code { font-size: .7rem; }
+      .ln { padding: 0 8px; } .ln i { margin-right: 8px; }
+    }
+    @media (max-width: 360px) { .btn { padding: 8px 10px; font-size: .85rem; } .stage { height: 215px; } }
+    @media (min-width: 1280px) { .code { font-size: .9rem; } }   /* layar lebar */
     #grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 520px), 1fr)); gap: 24px; }
   </style>
 </head>
 <body>
   <header class="max-w-6xl mx-auto px-4 pt-6">
-    <h1 class="text-2xl font-bold">Bubble Sort vs Insertion Sort</h1>
+    <span class="name">Tugas Maulana Syafikh Alkhudri - 1512625004</span>
+    <h1 class="font-bold mt-3" style="font-size:clamp(1.3rem,4.5vw,1.75rem)">Bubble Sort vs Insertion Sort</h1>
     <p class="text-sm mt-1" style="color:var(--mu)">Ketik angkanya saja, spasi diatur otomatis. Maksimal 6 angka, tiap angka 0–99 (09 dibaca 9), tidak boleh ada yang sama. Angka satu digit: awali 0 (05) atau ketik spasi setelahnya. <span id="cnt" class="font-bold"></span></p>
     <div class="mt-4 flex flex-wrap gap-3 items-center">
       <label class="inp"><b>[</b><input id="inp" placeholder="13 21 93 73 56 66" inputmode="numeric" autocomplete="off" /><b>]</b></label>
@@ -64,6 +83,7 @@
   </header>
 
   <main id="grid" class="max-w-6xl mx-auto px-4 py-5"></main>
+  <footer class="max-w-6xl mx-auto px-4 pb-8 text-center text-xs" style="color:var(--mu)">Tugas Maulana Syafikh Alkhudri - 1512625004</footer>
 
   <script>
     const $ = (id) => document.getElementById(id);
@@ -171,6 +191,18 @@
         break: 'Tidak ada swap → sudah terurut', done: 'Selesai: array terurut' })[ev.op] || '';
     }
 
+    function marks(p, ev) {
+      if (ev.pair) {                                       // bracket perbandingan
+        const lo = Math.min(...ev.pair), hi = Math.max(...ev.pair);
+        p.brk.style.opacity = 1; p.brk.style.left = X(p, lo) - 4 + 'px';
+        p.brk.style.width = X(p, hi) + p.g.w - X(p, lo) + 8 + 'px';
+        p.brk.querySelector('span').textContent = ev.gt ? '>' : '≤';
+      } else p.brk.style.opacity = 0;
+      const b = ev.boundary;                               // garis pemisah area sorted
+      if (b == null || b <= 0 || b >= p.els.length) p.divider.style.opacity = 0;
+      else { p.divider.style.opacity = 1; p.divider.style.left = X(p, b) - p.g.gap / 2 - 1 + 'px'; }
+    }
+
     function handle(p, ev, dur) {
       if (ev.swap) {                                       // kiri -> kanan lewat ATAS, kanan -> kiri lewat BAWAH
         const [a, b] = ev.swap, L = p.els[a], R = p.els[b];
@@ -192,16 +224,7 @@
         el.className = c.join(' ');
       });
 
-      if (ev.pair) {                                       // bracket perbandingan
-        const lo = Math.min(...ev.pair), hi = Math.max(...ev.pair);
-        p.brk.style.opacity = 1; p.brk.style.left = X(p, lo) - 4 + 'px';
-        p.brk.style.width = X(p, hi) + p.g.w - X(p, lo) + 8 + 'px';
-        p.brk.querySelector('span').textContent = ev.gt ? '>' : '≤';
-      } else p.brk.style.opacity = 0;
-
-      const b = ev.boundary;                               // garis pemisah area sorted
-      if (b == null || b <= 0 || b >= p.els.length) p.divider.style.opacity = 0;
-      else { p.divider.style.opacity = 1; p.divider.style.left = X(p, b) - p.g.gap / 2 - 1 + 'px'; }
+      p.last = ev; marks(p, ev);
 
       p.arrv.textContent = '[' + ev.arr.join(' ') + ']';
       p.cmpt.textContent = describe(p, ev);
@@ -330,7 +353,8 @@
     addEventListener('resize', () => panels.forEach((p) => {
       if (!p.els.length) return;
       geom(p, p.els.length);
-      p.els.forEach((el, i) => { el.style.width = p.g.w + 'px'; el.style.transform = at(p, i); });
+      p.els.forEach((el, i) => { el.style.width = p.g.w + 'px'; el.style.fontSize = Math.max(11, Math.min(20, p.g.w * .42)) + 'px'; el.style.transform = at(p, i); });
+      if (p.last) marks(p, p.last);
     }));
 
     $('inp').dispatchEvent(new Event('input'));   // isi counter "Angka: n/6" dari nilai awal
